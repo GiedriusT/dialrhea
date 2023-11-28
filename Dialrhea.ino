@@ -1,33 +1,30 @@
-/*********************************************************************
-These are the brains of Dialrhea - revolutionary shitty machine
-Author: Giedrius Tamulaitis
-E-mail: garoslavas@gmail.com
+/***************************************************************************
+These are the brains of Dialrhea - revolutionary shitty machine,  written
+during Internet Of Shit Hackathon 2017 at Technariumas, Vilnius, Lithuania
+
+Author: Giedrius Tamulaitis, giedrius@tamulaitis.lt
 Version: 1.0
 
 This code is for Adafruit nRF51822 based Bluefruit LE modules
 https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend
-*********************************************************************/
+***************************************************************************/
 
 #include <Arduino.h>
 #include <SPI.h>
 #if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined(ARDUINO_ARCH_SAMD)
   #include <SoftwareSerial.h>
 #endif
-
 #include "Adafruit_BLE.h"
-// #include "Adafruit_BluefruitLE_SPI.h"
 #include "Adafruit_BluefruitLE_UART.h"
-
 #include "BluefruitConfig.h"
 
-// Official name of the device
 #define DEVICE_NAME "Dialrhea"
 
-// Pin rotary dial input is connected to
+// Rotary dial input PIN
 #define ROTARY_PIN 2
-// Pin handset click button is connected to
+// Handset input PIN
 #define HANDSET_PIN 3
-// Pin operation mode select potentiometer is connected to
+// Operation mode potentiometer PIN
 #define OPERATION_MODE_PIN A5
 
 // How long to wait before sending keyup message for control keys in Gaming mode
@@ -37,7 +34,7 @@ https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend
 // How long to wait before sending keyup message for keys that are supposed to be just one clicks
 #define INSTANT_KEY_HOLD_DURATION 10
 
-// Pins for status LED legs
+// Pins for status LED RGB legs
 #define STATUS_LED_RED_PIN 4
 #define STATUS_LED_GREEN_PIN 6
 #define STATUS_LED_BLUE_PIN 5
@@ -110,7 +107,7 @@ bool rotaryNeedToEmitEvent = 0;
 int rotaryPulseCount;
 
 // Operation modes
-#define OPERATION_MODE_GAMING 0 // Gaming controls fine tuned for the bestgame of all times "Doom"
+#define OPERATION_MODE_GAMING 0 // Gaming controls fine tuned for the best game of all times: "Doom"
 #define OPERATION_MODE_EMOJI 1 // Emojis + Enter
 #define OPERATION_MODE_BORING 2 // Numbers + Esc
 
@@ -138,11 +135,8 @@ bool keyPressStateChanged;
 Adafruit_BluefruitLE_UART ble(BLUEFRUIT_HWSERIAL_NAME, BLUEFRUIT_UART_MODE_PIN);
 
 void setup(void) {
-  
-  // Set pin modes
   pinMode(ROTARY_PIN, INPUT);
   pinMode(HANDSET_PIN, INPUT_PULLUP);
-
   pinMode(STATUS_LED_RED_PIN, OUTPUT);
   pinMode(STATUS_LED_GREEN_PIN, OUTPUT);
   pinMode(STATUS_LED_BLUE_PIN, OUTPUT);
@@ -155,10 +149,7 @@ void setup(void) {
   // Give some time for chip to warm up or whatever
   delay(1000);
 
-  // Initialize serial conection and say hello
   initializeSerialConnection();
-
-  // Initialize and configure Bluetooth LE module 
   initializeBLEModule();
 
   // Delay a bit because good devices always take some time to start
@@ -167,38 +158,26 @@ void setup(void) {
   setStatusLEDColor(COLOR_BLUE);
 }
 
-void loop(void)
-{
-  // Reset state change tracking variable in the start of every loop
+void loop(void) {
   keyPressStateChanged = false;
-  
-  // Read input from potentiometer and set operation mode accordingly
   refreshOperationMode();
-  
-  // Monitor input from ragelis and send commands if someone nervously slammed it down trying to kill an annoying Imp
   handleHandset();
-
-  // Monitor input from rotary input and send commands when complete dials are detected
   handleRotary();
-
-  // Process keyup timer that track when each key has to be released
   processKeyUps();
 
-  // If state of pressed keys changed - send the current state
+  // If state of pressed keys changed - send the new state
   if (keyPressStateChanged)
     sendCurrentlyPressedKeys();
 }
 
 // Sets the color of status LED
 void setStatusLEDColor(int colorID) {
-
   digitalWrite(STATUS_LED_RED_PIN, colorID == COLOR_RED ? HIGH : LOW);
   digitalWrite(STATUS_LED_GREEN_PIN, colorID == COLOR_GREEN ? HIGH : LOW);
   digitalWrite(STATUS_LED_BLUE_PIN, colorID == COLOR_BLUE ? HIGH : LOW);
-
 }
 
-// Helper function to output critical errors
+// Outputs error message and bricks the revolutionary shitty machine
 void error(const __FlashStringHelper*err) {
 
   setStatusLEDColor(COLOR_RED);
@@ -207,61 +186,53 @@ void error(const __FlashStringHelper*err) {
   while (1);
 }
 
-// Opens serial connection for debug
-void initializeSerialConnection() {
+// Blinks the status LED (only green supported for now)
+void blink() {
+  setStatusLEDColor(COLOR_OFF);
+  delay(100);
+  setStatusLEDColor(COLOR_GREEN);
+}
 
-    // Begin serial connection
+// Opens serial connection for debugging
+void initializeSerialConnection() {
   Serial.begin(9600);
   Serial.println(F("Hello, I am the Dialrhea! Ready for some dialing action?"));
   Serial.println(F("8-------------------------------------D"));
-  
 }
 
-// Initializes Bluetooth LE module and sets required parameters
+// Initializes Bluetooth LE module
 void initializeBLEModule() {
-
   // Buffer for holding commands that have to be sent to BLE module
   char commandString[64];
 
   setStatusLEDColor(COLOR_GREEN);
 
-  // Initialise Bluetooth LE module
   Serial.print(F("Initialising the Bluefruit LE module: "));
   if (!ble.begin(VERBOSE_MODE)) error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
   Serial.println( F("Easy!") );
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
-  // Perdorm factory reset if FACTORYRESET_ENABLE is true
-  if ( FACTORYRESET_ENABLE )
+  if (FACTORYRESET_ENABLE)
   {
     Serial.println(F("Performing a factory reset: "));
     if (!ble.factoryReset()) error(F("Couldn't factory reset. Have no idea why..."));
     Serial.println(F("Done, feeling like a virgin again!"));
   }
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
   // Disable command echo from Bluefruit
   ble.echo(false);
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
-  // Print Bluefruit information
   Serial.println("Requesting Bluefruit info:");
   ble.info();
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
-  // Change the device name to make it to make it what it is
+  // Change the device name so the whole world knows it as Dialrhea
   Serial.print(F("Setting device name to '"));
   Serial.print(DEVICE_NAME);
   Serial.print(F("': "));
@@ -269,103 +240,75 @@ void initializeBLEModule() {
   if (!ble.sendCommandCheckOK(commandString)) error(F("Could not set device name for some reason. Sad."));
   Serial.println(F("It's beautiful!"));
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
-  // Enable HID Service
   Serial.print(F("Enable HID Service (including Keyboard): "));
   strcpy(commandString, ble.isVersionAtLeast(MINIMUM_FIRMWARE_VERSION) ? "AT+BleHIDEn=On" : "AT+BleKeyboardEn=On");
   if (!ble.sendCommandCheckOK(commandString)) error(F("Could not enable Keyboard, we're in deep shit..."));
   Serial.println(F("I'm now officially a keyboard!"));
 
-  setStatusLEDColor(COLOR_OFF);
-  delay(100);
-  setStatusLEDColor(COLOR_GREEN);
+  blink();
 
   // Make software reset (add or remove service requires a reset)
   Serial.print(F("Performing a SW reset (service changes require a reset): "));
   if (!ble.reset()) error(F("Couldn't reset?? Lame."));
   Serial.println(F("Baby I'm ready to go!"));
   Serial.println();
-  
 }
 
 // Reads the position of operation mode select potentiometer and determines current operation mode
 void refreshOperationMode() {
-
-  // Read input from operation mode potentiometer and set operation mode
   operationMode = floor((float)analogRead(OPERATION_MODE_PIN) / 342.0);
-
 }
 
-// Handles tracking the state of handset
+// Handles tracking the handset state
 void handleHandset() {
-
   // Ignore input until last action timeout passes (to filter out noise)
-  if (millis() - handsetPressStartTime > handsetPressStartTimeout)
-  {
-    // Read the input from digital in
+  if (millis() - handsetPressStartTime > handsetPressStartTimeout) {
     int ragelisCurrentValue = digitalRead(HANDSET_PIN);
     
-    // Register a click if ragelis is currently not pressed and we detect HIGH value
-    if (!isHandsetPressed && ragelisCurrentValue == HIGH)
-    {
+    if (!isHandsetPressed && ragelisCurrentValue == HIGH) {
       isHandsetPressed = true;
       handsetPressStartTime = millis();
-
-      // Emit clicked event
       onHandsetClicked();
     }
-    // Otherwise if ragelis is currently pressed and we detect LOW just udate the state
-    else if (isHandsetPressed && ragelisCurrentValue == LOW)
-    {
+
+    else if (isHandsetPressed && ragelisCurrentValue == LOW) {
       isHandsetPressed = false;
       handsetPressStartTime = millis(); 
     }
   }
-
 }
 
-// Handles tracking of the state of rotary dial
+// Handles tracking of the rotary dial state
 void handleRotary() {
-
-  // Get current rotary value
   int rotaryCurrentValue = digitalRead(ROTARY_PIN);
 
   // If rotary isn't being dialed or it just finished being dialed
-  if ((millis() - rotaryLastValueChangeTime) > rotaryHasFinishedRotatingTimeout)
-  {
+  if ((millis() - rotaryLastValueChangeTime) > rotaryHasFinishedRotatingTimeout) {
     // If rotary just finished being dialed - we need to emit the event
-    if (rotaryNeedToEmitEvent)
-    {
+    if (rotaryNeedToEmitEvent) {
       // Emit the event (we mod the count by 10 because '0' will send 10 pulses)
       onRotaryNumberDialed(rotaryPulseCount % 10);
-
-      // Reset counts
       rotaryNeedToEmitEvent = false;
       rotaryPulseCount = 0;
     }
-  } 
+  }
 
   // If rotary value has changed - register the time when it happened
-  if (rotaryCurrentValue != rotaryLastValue)
-  {
+  if (rotaryCurrentValue != rotaryLastValue) {
     rotaryLastValueChangeTime = millis();
   }
 
   // Start analyzing data only when signal stabilizes (debounce timeout passes)
-  if ((millis() - rotaryLastValueChangeTime) > rotaryDebounceTimeout)
-  {
-    // This means that the switch has either just gone from closed->open or vice versa.
-    if (rotaryCurrentValue != rotaryTrueValue)
-    {
+  if ((millis() - rotaryLastValueChangeTime) > rotaryDebounceTimeout) {
+    // This means that the switch has either just gone from closed to open or vice versa.
+    if (rotaryCurrentValue != rotaryTrueValue) {
       // Register actual value change 
       rotaryTrueValue = rotaryCurrentValue;
 
       // If it went to HIGH - increase pulse count
-      if (rotaryTrueValue == HIGH)
-      {
+      if (rotaryTrueValue == HIGH) {
         rotaryPulseCount++; 
         rotaryNeedToEmitEvent = true;
       } 
@@ -374,15 +317,12 @@ void handleRotary() {
 
   // Store current value as last value
   rotaryLastValue = rotaryCurrentValue;
-
 }
 
-// Called when click of handset button is registered
+// Event handler triggered when click of the handset button is registered
 void onHandsetClicked() {
-
   // Register state changes for handset button keys depending on the mode
   if (operationMode == OPERATION_MODE_GAMING) {
-
     if (keyPressStates[KEY_GAMING_MODE_HANDSET_1_INDEX] == false || keyPressStates[KEY_GAMING_MODE_HANDSET_2_INDEX] == false)
       keyPressStateChanged = true;
   
@@ -391,58 +331,43 @@ void onHandsetClicked() {
   
     keyPressStates[KEY_GAMING_MODE_HANDSET_2_INDEX] = true;
     keyPressTimes[KEY_GAMING_MODE_HANDSET_2_INDEX] = millis();
-
   } else if (operationMode == OPERATION_MODE_EMOJI) {
-
     if (keyPressStates[KEY_EMOJI_MODE_HANDSET_INDEX] == false)
       keyPressStateChanged = true;
   
     keyPressStates[KEY_EMOJI_MODE_HANDSET_INDEX] = true;
     keyPressTimes[KEY_EMOJI_MODE_HANDSET_INDEX] = millis();
-    
   } else if (operationMode == OPERATION_MODE_BORING) {
-
     if (keyPressStates[KEY_BORING_MODE_HANDSET_INDEX] == false)
       keyPressStateChanged = true;
   
     keyPressStates[KEY_BORING_MODE_HANDSET_INDEX] = true;
     keyPressTimes[KEY_BORING_MODE_HANDSET_INDEX] = millis();
-    
   }
-
 }
 
-// Called when number was dialed on rotary dial
+// Event handler triggered when number was dialed on rotary dial
 void onRotaryNumberDialed(int number) {
-
   if (operationMode == OPERATION_MODE_GAMING) {
-
     // Set key state for dialed key
     if (keyPressStates[number] == false)
       keyPressStateChanged = true;
   
     keyPressStates[number] = true;
     keyPressTimes[number] = millis();
-
   } else if (operationMode == OPERATION_MODE_EMOJI) {
-
     // Send emoji to happy device
     sendCharArray(emojis[number]);
-    
   } else if (operationMode == OPERATION_MODE_BORING) {
-
     // Form string from number and send it to device
     char numberString[1];
     sprintf(numberString, "%d", number);
     sendCharArray(numberString);
-    
   }
-  
 }
 
 // Sends raw command to BLE module and prints debug output
 void sendBluetoothCommand(char *commandString) {
-
   setStatusLEDColor(COLOR_OFF);
 
   Serial.print(commandString);
@@ -456,53 +381,36 @@ void sendBluetoothCommand(char *commandString) {
     Serial.println(F(" <- FAILED!"));
     setStatusLEDColor(COLOR_RED);
   };
-  
 }
 
 // Sends char array (string) to BLE module
 void sendCharArray(char* charArray) {
-
   char commandString[64];
   sprintf(commandString, "AT+BleKeyboard=%s", charArray);
-  
   sendBluetoothCommand(commandString);
 }
 
 // Checks which keys are currently pressed and sends keycodes to BLE module
 void sendCurrentlyPressedKeys() {
-
   char commandString[64] = "AT+BleKeyboardCode=00-00";
 
   for (int i=0; i<KEY_COUNT; i++) {
-
     if (keyPressStates[i] == true && keyValues[i] != 0x00) {
-
       sprintf (commandString, "%s-%02X", commandString, keyValues[i]);
-    
     }
-  
   }
 
   sendBluetoothCommand(commandString);
-  
 }
 
-// Process timers to detect when keyup messages has to be sent for each key
+// Process timers to detect when keyup messages have to be sent for each key
 void processKeyUps() {
-
   for (int i=0; i<KEY_COUNT; i++) {
-
     if (keyPressStates[i] == true) {
-
       if (millis() - keyPressTimes[i] > keyHoldDurations[i]) {
-
         keyPressStates[i] = false;
         keyPressStateChanged = true;
-        
       }
-    
     }
-  
   }
-  
 }
