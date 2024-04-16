@@ -1,6 +1,7 @@
 /***************************************************************************
-These are the brains of Dialrhea - revolutionary shitty machine,  written
-during Internet Of Shit Hackathon 2017 at Technariumas, Vilnius, Lithuania
+These are the brains of Dialrhea - revolutionary shitty machine, written in
+few hours during Internet Of Shit Hackathon 2017 at Technariumas, Vilnius,
+Lithuania, so expect the code to be pretty shitty.
 
 Author: Giedrius Tamulaitis, giedrius@tamulaitis.lt
 Version: 1.0
