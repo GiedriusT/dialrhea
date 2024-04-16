@@ -32,7 +32,8 @@ https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend
 #define CONTROL_KEY_HOLD_DURATION 200
 // How long to wait before sending keyup message for fire button in Gaming mode
 #define FIRE_KEY_HOLD_DURATION 200
-// How long to wait before sending keyup message for keys that are supposed to be just one clicks
+// How long to wait before sending keyup message for keys that are supposed
+// to be just one clicks
 #define INSTANT_KEY_HOLD_DURATION 10
 
 // Pins for status LED RGB legs
@@ -49,7 +50,8 @@ https://learn.adafruit.com/introducing-the-adafruit-bluefruit-le-uart-friend
 // Total number of keys that support timed presses
 #define KEY_COUNT 14
 
-// Index of handset button data in data arrays (Gaming mode, uses two because we want to send both fire and open doors keys)
+// Index of handset button data in data arrays (Gaming mode, we need two because
+//we are sending keys for both fire and open door)
 #define KEY_GAMING_MODE_HANDSET_1_INDEX 10
 #define KEY_GAMING_MODE_HANDSET_2_INDEX 11
 // Index of handset button data in data arrays (Emoji mode)
@@ -70,7 +72,7 @@ const int keyValues[KEY_COUNT] = {
   0x00, // Number 8 in gaming mode
   0x00, // Number 9 in gaming mode
   0x10, // Handset click in gaming mode (KEY_GAMING_MODE_HANDSET_1_INDEX) (Currently space)
-  0x2C, // Handset click in gaming mode (KEY_GAMING_MODE_HANDSET_2_INDEX), we need two because we are sending keys for both fire and open door (Currently 'm')
+  0x2C, // Handset click in gaming mode (KEY_GAMING_MODE_HANDSET_2_INDEX) (Currently 'm')
   0x28, // Handset click in emoji mode (KEY_EMOJI_MODE_HANDSET_INDEX) (Currently Enter)
   0x29  // Handset click in boring mode (KEY_BORING_MODE_HANDSET_INDEX) (Currently Esc)
 };
@@ -123,7 +125,8 @@ bool isHandsetPressed = false;
 unsigned long handsetPressStartTime = 0;
 unsigned long handsetPressStartTimeout = 60;
 
-// Variable that determines weather the state of keys changed during processing of the loop (so we can send commands just once in the end of the loop if it is needed)
+// Variable that determines weather the state of keys changed during processing of the loop (so we
+// can send commands just once in the end of the loop if it is needed)
 bool keyPressStateChanged;
 
 // Config settings for Bluetooth LE module
@@ -144,7 +147,8 @@ void setup(void) {
 
   setStatusLEDColor(COLOR_GREEN);
 
-  // Wait while serial connection is established (required for Flora & Micro or when you want to halt initialization till you open serial monitor)
+  // Wait while serial connection is established (required for Flora & Micro or when you want to
+  // halt initialization till you open serial monitor)
   // while (!Serial);
   
   // Give some time for chip to warm up or whatever
